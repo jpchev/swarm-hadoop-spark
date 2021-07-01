@@ -1,0 +1,46 @@
+version: '3.2'
+services:
+  spark-master:
+    image: bde2020/spark-master:2.4.5-hadoop2.7
+    networks:
+      - network
+    deploy:
+      replicas: 1
+      mode: replicated
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+    env_file:
+      - ./hadoop.env
+
+  spark-worker:
+    image: bde2020/spark-worker:2.4.5-hadoop2.7
+    networks:
+      - network
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.labels.type == hs-worker
+    ports:
+      - target: 8081
+        published: 8081
+        protocol: tcp
+        mode: host
+    env_file:
+      - ./hadoop.env
+
+networks:
+  network:
+    external: true

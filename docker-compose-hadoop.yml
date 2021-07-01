@@ -1,0 +1,59 @@
+version: '3.2'
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop2.7.4-java8
+    networks:
+      - network
+    volumes:
+      - namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop.env
+    ports:
+      - target: 50070
+        published: 50070
+        protocol: tcp
+        mode: host
+      - target: 9000
+        published: 9010
+        protocol: tcp
+        mode: host
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      # add placement constraint to allocate namenode on particular server
+      placement:
+        constraints:
+          - node.role == manager
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop2.7.4-java8
+    networks:
+      network:
+        aliases:
+         - datanode
+    volumes:
+      - datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070"
+    deploy:
+      # mode global will deploy one datanode per docker swarm node
+      mode: global
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.labels.type == hs-worker
+
+volumes:
+  datanode:
+  namenode:
+
+networks:
+  network:
+    external: true
